@@ -1,0 +1,217 @@
+substitutions:
+  blueriiot_mac: !secret blueriiot_mac
+  blueriiot_name_prefix: !secret blueriiot_nameprefix
+  blueriiot_id_prefix: !secret blueriiot_idprefix
+  
+  # send true 0x01 to this service ID
+  blueriiot_send_service_uuid: 'F3300001-F0A2-9B06-0C59-1BC4763B5C00'
+  blueriiot_send_characteristic_uuid: 'F3300002-F0A2-9B06-0C59-1BC4763B5C00'
+  
+  # notification is recieved on this Service ID                  
+  blueriiot_recieve_service_uuid: 'F3300001-F0A2-9B06-0C59-1BC4763B5C00'
+  blueriiot_recieve_characteristic_uuid: 'F3300003-F0A2-9B06-0C59-1BC4763B5C00'
+  
+esphome:
+  name: wt32eth01
+
+esp32:
+  #board: wt32-eth01
+  #board: esp32dev
+  board: esp-wrover-kit
+  framework:
+    type: arduino
+
+
+# Enable logging
+logger:
+  #level: VERY_VERBOSE
+  level: INFO
+  
+# Enable Home Assistant API
+api:
+  encryption:
+    key: !secret esphome_ha_api_key
+
+ota:
+  password: !secret esphome_ota_key
+
+ethernet:
+  type: LAN8720
+  mdc_pin: GPIO23
+  mdio_pin: GPIO18
+  clk_mode: GPIO0_IN
+  phy_addr: 1
+  power_pin: GPIO16
+ 
+# Optional manual IP
+  manual_ip: x.x.x.x
+    static_ip: x.x.x.x
+    gateway: x.x.x.x
+    subnet: x.x.x.x
+    dns1: x.x.x.x
+
+
+esp32_ble_tracker:
+
+ble_client:
+  - mac_address: ${blueriiot_mac}
+    id: ble_client_${blueriiot_id_prefix}
+    on_connect: 
+      then:
+        - lambda: "id(binary_sensor_${blueriiot_id_prefix}_connected).publish_state(true);"
+        - delay: 2s
+        - button.press: button_${blueriiot_id_prefix}_doreading
+    on_disconnect: [lambda: "id(binary_sensor_${blueriiot_id_prefix}_connected).publish_state(false);"]
+
+    
+binary_sensor:
+  - platform: gpio
+    pin: 
+      number: GPIO12
+      mode:
+        input: true
+        pulldown: true
+    filters:
+      - delayed_on: 100ms
+      - delayed_off: 100ms
+    name: "Zwembad Pomp Handmatig"
+##
+## Blue Connect    
+  - platform: template
+    id: binary_sensor_${blueriiot_id_prefix}_connected
+    name: ${blueriiot_name_prefix} Status
+    device_class: connectivity
+    entity_category: diagnostic
+
+##
+##
+switch:
+  - platform: gpio
+    pin: GPIO14
+    name: "Zwembad Pomp" 
+  - platform: gpio
+    pin: GPIO15
+    name: "Solarbol Klep"
+  - platform: ble_client
+    ble_client_id: ble_client_${blueriiot_id_prefix}
+    name: "${blueriiot_name_prefix} Enable"
+    id: switch_${blueriiot_id_prefix}_enable
+  
+dallas:
+  - pin: GPIO4
+
+sensor:
+  - platform: dallas
+    address: 0xce0000000f4f9c28
+    name: "Solarbol Aanvoer"
+  - platform: dallas
+    address: 0x3e00000010268928
+    name: "Solarbol Retour"
+
+  - platform: pulse_counter
+    name: "Zwembad Water Doorstroom"
+    pin: 
+      number: GPIO35
+    update_interval: 30s
+    filters:
+    - lambda: return (x / 288) * 60.0;
+    unit_of_measurement: "L/uur"
+
+  - platform: adc
+    pin: GPIO36
+    name: "Zwembad Zonlichtsterkte"
+    update_interval: 60s  
+    
+  - platform: template 
+    id: sensor_${blueriiot_id_prefix}_temperature
+    name: ${blueriiot_name_prefix} Temperature
+    # Optional variables:
+    unit_of_measurement: "°C"
+    icon: "mdi:water-percent"
+    device_class: "temperature"
+    state_class: "measurement"
+    accuracy_decimals: 1
+  
+  - platform: template 
+    id: sensor_${blueriiot_id_prefix}_ph
+    name: ${blueriiot_name_prefix} PH
+    # Optional variables:
+    #unit_of_measurement: "°C"
+    #icon: "mdi:water-percent"
+    #device_class: "temperature"
+    state_class: "measurement"
+    accuracy_decimals: 1
+
+  - platform: template 
+    id: sensor_${blueriiot_id_prefix}_orp
+    name: ${blueriiot_name_prefix} Chloor
+    # Optional variables:
+    #unit_of_measurement: "°C"
+    #icon: "mdi:water-percent"
+    device_class: "voltage"
+    state_class: "measurement"
+    accuracy_decimals: 1
+    
+  - platform: template 
+    id: sensor_${blueriiot_id_prefix}_bat
+    name: ${blueriiot_name_prefix} Battery
+    # Optional variables:
+    #unit_of_measurement: "°C"
+    #icon: "mdi:water-percent"
+    device_class: "battery"
+    state_class: "measurement"
+    accuracy_decimals: 1
+    
+##
+## Blue Connect
+button:
+  - platform: template
+    id: button_${blueriiot_id_prefix}_doreading
+    name: ${blueriiot_name_prefix} do reading
+    internal: true
+    on_press:
+      then:
+        - ble_client.ble_write:
+            id: ble_client_${blueriiot_id_prefix}
+            service_uuid: ${blueriiot_send_service_uuid}
+            characteristic_uuid: ${blueriiot_send_characteristic_uuid}
+            # A lambda returning an std::vector<uint8_t>.
+            value: !lambda |-
+              return {0x01};
+
+text_sensor:
+  - platform: ble_client
+    id: ${blueriiot_id_prefix}_reading_data
+    name: ${blueriiot_name_prefix} reading data
+    internal: true
+    ble_client_id: ble_client_${blueriiot_id_prefix}
+    service_uuid: ${blueriiot_recieve_service_uuid}
+    characteristic_uuid: ${blueriiot_recieve_characteristic_uuid}
+    notify: true
+    update_interval: never
+    on_notify:
+      then:
+       lambda: |-
+          std::string rawhex = format_hex_pretty((uint8_t *) x.c_str(), x.size()).c_str();
+          ESP_LOGD("raw_hex", "%s", rawhex.c_str());
+
+          float temperature = (float)((int16_t)(x[2]<< 8) + x[1])/100;
+          ESP_LOGD("temp", "%f", temperature);
+          id(sensor_${blueriiot_id_prefix}_temperature).publish_state(temperature);
+              
+          float raw_ph = (float)( (int16_t) (x[4]<< 8) + x[3]) ;
+          float ph = (float)( (int16_t) (2048 - raw_ph)) / 232  + 7 ; 
+          ESP_LOGD("ph", "%f", ph);
+          id(sensor_${blueriiot_id_prefix}_ph).publish_state(ph);
+          
+          float orp = (float)( (int16_t) (x[6]<< 8) + x[5]) / 3.86 ;
+          ESP_LOGD("orp", "%f", orp);
+          id(sensor_${blueriiot_id_prefix}_orp).publish_state(orp);
+          
+          float bat = (float)( (int16_t) x[11]) ;
+          ESP_LOGD("bat", "%f", bat);
+          id(sensor_${blueriiot_id_prefix}_bat).publish_state(bat);
+          
+          
+          
+          id(switch_${blueriiot_id_prefix}_enable).turn_off();

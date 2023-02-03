@@ -1,0 +1,12 @@
+#ignore specific files from being pushed
+*.txt
+*.log
+*.pyc
+*.env
+venv/*
+### VisualStudioCode ###
+.vscode/settings.json
+.vscode/_settings.json
+.vscode/tasks.json
+.vscode/launch.json
+.vscode/extensions.json
