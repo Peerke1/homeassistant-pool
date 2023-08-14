@@ -156,7 +156,7 @@ sensor:
     id: sensor_${blueriiot_id_prefix}_bat
     name: ${blueriiot_name_prefix} Battery
     # Optional variables:
-    #unit_of_measurement: "°C"
+    unit_of_measurement: "%"
     #icon: "mdi:water-percent"
     device_class: "battery"
     state_class: "measurement"
@@ -204,11 +204,11 @@ text_sensor:
           ESP_LOGD("ph", "%f", ph);
           id(sensor_${blueriiot_id_prefix}_ph).publish_state(ph);
           
-          float orp = (float)( (int16_t) (x[6]<< 8) + x[5]) / 3.86 ;
+          float orp = (float)( (int16_t) (x[6]<< 8) + x[5]) / 3.86  - 21.57826;
           ESP_LOGD("orp", "%f", orp);
           id(sensor_${blueriiot_id_prefix}_orp).publish_state(orp);
           
-          float bat = (float)( (int16_t) x[11]) ;
+          float bat = (float)( (int16_t) x[11])  / 36 * 100;
           ESP_LOGD("bat", "%f", bat);
           id(sensor_${blueriiot_id_prefix}_bat).publish_state(bat);
           
