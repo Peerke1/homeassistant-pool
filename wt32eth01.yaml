@@ -153,12 +153,12 @@ sensor:
     accuracy_decimals: 1
     
   - platform: template 
-    id: sensor_${blueriiot_id_prefix}_bat
-    name: ${blueriiot_name_prefix} Battery
+    id: sensor_${blueriiot_id_prefix}_temp
+    name: ${blueriiot_name_prefix} Temperature
     # Optional variables:
-    #unit_of_measurement: "°C"
+    unit_of_measurement: "°C"
     #icon: "mdi:water-percent"
-    device_class: "battery"
+    device_class: "temperature"
     state_class: "measurement"
     accuracy_decimals: 1
     
@@ -208,10 +208,9 @@ text_sensor:
           ESP_LOGD("orp", "%f", orp);
           id(sensor_${blueriiot_id_prefix}_orp).publish_state(orp);
           
-          float bat = (float)((int16_t)(x[11]<< 8) + x[10]) ;
-          
-          ESP_LOGD("bat", "%f", bat);
-          id(sensor_${blueriiot_id_prefix}_bat).publish_state(bat);
+          float temp = (float)( (int16_t) x[11]);
+          ESP_LOGD("temp", "%f", temp);
+          id(sensor_${blueriiot_id_prefix}_temp).publish_state(temp);
           
           
           
