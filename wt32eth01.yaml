@@ -204,14 +204,13 @@ text_sensor:
           ESP_LOGD("ph", "%f", ph);
           id(sensor_${blueriiot_id_prefix}_ph).publish_state(ph);
           
-          float orp = (float)( (int16_t) (x[6]<< 8) + x[5]) / 3.86 ;
+          float orp = (float)( (int16_t) (x[6]<< 8) + x[5]) / 3.86  - 21.57826;
           ESP_LOGD("orp", "%f", orp);
           id(sensor_${blueriiot_id_prefix}_orp).publish_state(orp);
           
           float temp = (float)( (int16_t) x[11]);
           ESP_LOGD("temp", "%f", temp);
           id(sensor_${blueriiot_id_prefix}_temp).publish_state(temp);
-          
-          
+   
           
           id(switch_${blueriiot_id_prefix}_enable).turn_off();
