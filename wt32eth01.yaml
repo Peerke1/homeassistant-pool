@@ -208,7 +208,8 @@ text_sensor:
           ESP_LOGD("orp", "%f", orp);
           id(sensor_${blueriiot_id_prefix}_orp).publish_state(orp);
           
-          float bat = (float)( (int16_t) x[11]) ;
+          float bat = (float)((int16_t)(x[11]<< 8) + x[10]) ;
+          
           ESP_LOGD("bat", "%f", bat);
           id(sensor_${blueriiot_id_prefix}_bat).publish_state(bat);
           
