@@ -156,9 +156,27 @@ sensor:
     id: sensor_${blueriiot_id_prefix}_bat
     name: ${blueriiot_name_prefix} Battery
     # Optional variables:
-    unit_of_measurement: "%"
+    unit_of_measurement: "°C"
     #icon: "mdi:water-percent"
-    device_class: "battery"
+    device_class: "temperature"
+    state_class: "measurement"
+    accuracy_decimals: 1
+    
+  - platform: template 
+    id: sensor_${blueriiot_id_prefix}_salt
+    name: ${blueriiot_name_prefix} Salt
+    # Optional variables:
+    unit_of_measurement: "g/L"
+    icon: "mdi:water-percent"
+    state_class: "measurement"
+    accuracy_decimals: 1
+    
+  - platform: template 
+    id: sensor_${blueriiot_id_prefix}_cond
+    name: ${blueriiot_name_prefix} Conductivity
+    # Optional variables:
+    unit_of_measurement: "mS/cm"
+    #icon: "mdi:water-percent"
     state_class: "measurement"
     accuracy_decimals: 1
     
@@ -207,6 +225,14 @@ text_sensor:
           float orp = (float)( (int16_t) (x[6]<< 8) + x[5]) / 3.86  - 21.57826;
           ESP_LOGD("orp", "%f", orp);
           id(sensor_${blueriiot_id_prefix}_orp).publish_state(orp);
+          
+          float salt = (float)( (int16_t) (x[8]<< 8) + x[7]) / 25.0;
+          ESP_LOGD("salt", "%f", salt);
+          id(sensor_${blueriiot_id_prefix}_salt).publish_state(salt);
+          
+          float cond = (float)( (int16_t) (x[10]<< 8) + x[9]) / 0.4134;
+          ESP_LOGD("cond", "%f", cond);
+          id(sensor_${blueriiot_id_prefix}_cond).publish_state(cond);
           
           float bat = (float)( (int16_t) x[11]);
           ESP_LOGD("bat", "%f", bat);
